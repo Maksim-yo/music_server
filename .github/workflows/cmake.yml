@@ -14,23 +14,21 @@ jobs:
     strategy:
       matrix:
         config:
-        
         - {
-            name: "Windows-mingw64 Debug"
-            build_type: Debug
-            cxx_standard: 20
-            msystem: MINGW64
-            cc: gcc
+            name: "Windows-mingw64 Debug",
+            build_type: Debug,
+            cxx_standard: 20,
+            msystem: MINGW64,
+            cc: gcc,
             cxx: g++ 
-
           }
           
         - {
-            name: "Windows-mingw64 Release"
-            build_type: Release
-            cxx_standard: 20
-            msystem: MINGW64
-            cc: gcc
+            name: "Windows-mingw64 Release",
+            build_type: Release,
+            cxx_standard: 20,
+            msystem: MINGW64,
+            cc: gcc,
             cxx: g++ 
           }
 
@@ -52,13 +50,13 @@ jobs:
         arch: 'win64_mingw'
         
     - name: Configure CMake
-      run: >- 
-      cmake 
-      -G Ninja 
-      -B ${{github.workspace}}/build 
-      -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
-      -D CMAKE_C_COMPILER=gcc
-      -D CMAKE_CXX_COMPILER=g++
+      run: |
+        cmake 
+        -G Ninja 
+        -B ${{github.workspace}}/build 
+        -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
+        -D CMAKE_C_COMPILER=gcc
+        -D CMAKE_CXX_COMPILER=g++
       
     
     - name: Build
