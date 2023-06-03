@@ -13,17 +13,36 @@ jobs:
 
     strategy:
       matrix:
-        build-type:
-          - key: debug
-            name: Debug
+        config:
+        
+        - {
+            name: "Windows-mingw64 Debug"
+            build_type: Debug
+            cxx_standard: 20
+            msystem: MINGW64
+            cc: gcc
+            cxx: g++ 
 
-          - key: release
-            name: Release
-            
+          }
+          
+        - {
+            name: "Windows-mingw64 Release"
+            build_type: Release
+            cxx_standard: 20
+            msystem: MINGW64
+            cc: gcc
+            cxx: g++ 
+          }
+
     steps:
 
+    - run: git config --global core.autocrlf input
     - uses: actions/checkout@v3
 
+    - uses: msys2/setup-msys2@v2
+      with:
+        msystem: ${{matrix.config.msystem}}
+    
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
       with:
@@ -33,11 +52,18 @@ jobs:
         arch: 'win64_mingw'
         
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build-type.key }}
+      run: >- 
+      cmake 
+      -G Ninja 
+      -B ${{github.workspace}}/build 
+      -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
+      -D CMAKE_C_COMPILER=gcc
+      -D CMAKE_CXX_COMPILER=g++
+      
     
     - name: Build
-      run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build-type.key }}
+      run: cmake --build ${{github.workspace}}/build --config ${{ matrix.config.build_type }} 
 
     - name: Test
       working-directory: ${{github.workspace}}/build
-      run: ctest -C ${{ matrix.build-type.key }}
+      run: ctest -C ${{ matrix.config.build_type }}
