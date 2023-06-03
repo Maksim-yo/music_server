@@ -43,7 +43,16 @@ jobs:
     - uses: msys2/setup-msys2@v2
       with:
         msystem: ${{matrix.config.msystem}}
-    
+        
+    - name: Check workflow files
+      run: |
+        bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+        ./actionlint -color
+        
+    - name: Install shellcheck
+      run: | 
+        choco install shellcheck
+        
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
       with:
