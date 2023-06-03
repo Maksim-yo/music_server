@@ -42,6 +42,11 @@ jobs:
       with:
         msystem: ${{matrix.config.msystem}}
         
+    - name: install Ninja
+      run: |
+        choco install ninja cmake
+        ninja --version
+        
     - name: Check workflow files
       shell: bash
       run: |
@@ -57,12 +62,14 @@ jobs:
         arch: 'win64_mingw'
         
     - name: Configure CMake
+      shell: bash
       run: |
-        cmake 
-        -B build 
-        -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
-        -D CMAKE_C_COMPILER=gcc
-        -D CMAKE_CXX_COMPILER=g++
+        cmake \
+        -G Ninja \
+        -B build \
+        -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} \
+        -D CMAKE_C_COMPILER=gcc \
+        -D CMAKE_CXX_COMPILER=g++ 
       
     
     - name: Build
