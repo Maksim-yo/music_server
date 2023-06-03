@@ -49,10 +49,6 @@ jobs:
         bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
         ./actionlint -color
         
-    - name: Install shellcheck
-      run: | 
-        choco install shellcheck
-        
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
       with:
@@ -62,9 +58,8 @@ jobs:
         arch: 'win64_mingw'
         
     - name: Configure CMake
-      run: |
+      run: >-
         cmake 
-        -G Ninja 
         -B ${{github.workspace}}/build 
         -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
         -D CMAKE_C_COMPILER=gcc
