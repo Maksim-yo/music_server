@@ -8,40 +8,51 @@ on:
 
 jobs:
 
-  build:
+  container-build:
     runs-on: windows-latest
 
-
+    services: 
+      postgres:
+        image: postgres
+        env: 
+          POSTGRES_PASSWORD: ${{ secrets.PG_PASSWORD }}
+          POSTGRES_USER: ${{ secrets.PG_USER }}
+          POSTGRES_DB: ${{ PG_DB }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+  			        
     strategy:
       matrix:
         config:
         - {
-            name: "Windows-mingw64 Debug",
+            name: "Windows-msvc Debug",
             build_type: Debug,
             cxx_standard: 20,
-            msystem: MINGW64,
-            cc: gcc,
-            cxx: g++ 
+            cc: "cl", 
+            cxx: "cl"
+
           }
           
         - {
-            name: "Windows-mingw64 Release",
+            name: "Windows-msvc2022 Release",
             build_type: Release,
             cxx_standard: 20,
-            msystem: MINGW64,
-            cc: gcc,
-            cxx: g++ 
-          }
-
+            cc: "cl", 
+            cxx: "cl"          }
+    env:
+    
+      VCPKG_DIR: ${{ github.workspace }}/vcpkg
+      VCPKG: ${{env.VCPKG_DIR}}/scripts/buildsystems/vcpkg.cmake 
+      VCPKG_DEFAULT_TRIPLET: x64
+      
     steps:
 
     - run: git config --global core.autocrlf input
     - uses: actions/checkout@v3
 
-    - uses: msys2/setup-msys2@v2
-      with:
-        msystem: ${{matrix.config.msystem}}
-        
     - name: install Ninja
       run: |
         choco install ninja cmake
@@ -58,19 +69,25 @@ jobs:
       with:
         version: '6.2.3'
         host: 'windows'
+        cache: true
         target: 'desktop'
-        arch: 'win64_mingw'
-        
+        arch: 'win64_msvc2019_64'
+
+      - name: Setup vcpkg (it does not install any package yet)
+      - uses: lukka/run-vcpkg@v11
+        with: 
+          vcpkgJsonGlob: ${{ github.workspace }}/vcpkg.json
+
     - name: Configure CMake
-      shell: bash
+    - uses: ilammy/msvc-dev-cmd@v1.4.1
+      with:
+        toolset: 17.3.2              #msvc2022 
       run: |
         cmake \
         -G Ninja \
         -B build \
         -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} \
-        -D CMAKE_C_COMPILER=gcc \
-        -D CMAKE_CXX_COMPILER=g++ 
-      
+        -DCMAKE_TOOLCHAIN_FILE=${{env.VCPKG}} \ 
     
     - name: Build
       run: cmake --build build --config ${{ matrix.config.build_type }} 
