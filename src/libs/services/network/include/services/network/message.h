@@ -1,206 +1,191 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
-#include <string>
-#include <vector>
-#include <optional>
-#include <QDataStream>
+
 #include <QString>
 #include <QBuffer>
 #include <QDateTime>
+#include <QList>
+#include "services/network/Constants.h"
+namespace Network {
 
-#include "Constants.h"
+//    #pragma pack(push, 1)
 
-#pragma pack (1)
-struct header{
-
-
-    friend QDataStream &operator>>(QDataStream &data_stream,  quint32 &head);
-
-    friend QDataStream& operator<<(QDataStream &data_stream,  header *&head){
+//    using
 
 
-        data_stream << head->header_size;
-        data_stream << head->send_time;
-        data_stream << head->type;
+    struct MessageItem{
+        QString key;
+        QVariant value;
+    };
 
-        return data_stream;
-
-    }
-
-    friend QDataStream& operator<<(QDataStream &data_stream,  header &head){
+    struct header{
 
 
-        data_stream << head.header_size;
-        data_stream << head.send_time;
-        data_stream << head.type;
+        friend QDataStream &operator>>(QDataStream &data_stream,  quint32 &head);
 
-        return data_stream;
-
-    }
+        friend QDataStream& operator<<(QDataStream &data_stream,  header *&head){
 
 
-    friend QDataStream &operator>>(QDataStream &data_stream,  header &head){
+            data_stream << head->header_size;
+            data_stream << head->type;
 
-        data_stream >> head.header_size;
-        data_stream >> head.send_time;
-        data_stream >> head.type;
-        return data_stream;
-    }
+            return data_stream;
 
+        }
 
-    friend QDataStream &operator>>(QDataStream &data_stream,  header *&head){
-
-        data_stream >> head->header_size;
-        data_stream >> head->send_time;
-        data_stream >> head->type;
-        return data_stream;
-    }
-
-    header(MessageType _type){
-
-        type = _type;
-        header_size += sizeof(type);
-        header_size += sizeof(send_time);
-        header_size += sizeof(header_size);
-    }
-
-    header(){}
-
-    void set_send_time(){
-
-        send_time = QDateTime::currentSecsSinceEpoch();
-
-    }
-
-    MessageType get_type() {return type; }
-    quint64 get_time_send() {return send_time; }
-    quint64 get_size() {return header_size; }
+        friend QDataStream& operator<<(QDataStream &data_stream,  header &head){
 
 
-private:
+            data_stream << head.header_size;
+            data_stream << head.type;
 
-    quint64 send_time = 0;
-    quint64 header_size = 0;
-    MessageType type;
+            return data_stream;
+
+        }
 
 
-};
+        friend QDataStream &operator>>(QDataStream &data_stream,  header &head){
 
-#pragma pack (1)
-struct message
-{
-public:
-    message(MessageType type) : head(type) {
+            data_stream >> head.header_size;
+            data_stream >> head.type;
+            return data_stream;
+        }
 
-        msg_size += sizeof(msg_size);
-        msg_size += head.get_size();
 
-    }
+        friend QDataStream &operator>>(QDataStream &data_stream,  header *&head){
 
-    message() {}
-    QByteArray* _serialize(){
+            data_stream >> head->header_size;
+            data_stream >> head->type;
+            return data_stream;
+        }
 
-        QByteArray* serialized_data = new QByteArray();
-        QDataStream data_stream(serialized_data, QIODevice::WriteOnly);
-        header& head = this->head;
-//        header* head = reinterpret_cast<header*>(this);
-        data_stream << head;
-        data_stream << msg_size;
-        return serialized_data;
+        header(Constants::MessageType _type);
 
-    }
-    void _deserialize(QByteArray* deseriliazed_data ){
+        header();
 
-        QDataStream data_stream(deseriliazed_data, QIODevice::ReadOnly );
-        header* head = reinterpret_cast<header*>(this);
-        data_stream >> *head;
-        data_stream >> msg_size;
+        static qint64 getInitialSize() {
 
-    }
+            return sizeof(Constants::MessageType) + sizeof(header_size);
+        }
 
-    virtual QByteArray* serialize() {return _serialize();}
-    virtual void deserialize(QByteArray* data) {return _deserialize(data);}
+        virtual ~header() {}
 
-    void set_send_time(){
-        head.set_send_time();
-    }
+        Constants::MessageType get_type() {return type; }
+        quint64 get_size() {return header_size; }
 
-    friend struct header;
-    friend QDataStream &operator<<(QDataStream &data_stream, message& msg)  // serailize
+
+    private:
+
+        Constants::MessageType type;
+        quint64 header_size = 0;
+
+
+    };
+
+
+    struct message
     {
+    public:
+        message(Constants::MessageType type);
+        message(message*&& msg);
+        message();
+        virtual ~message(){}
 
-        data_stream << msg.head;
-        data_stream << msg.msg_size;
-        return data_stream;
-    }
+        QByteArray* _serialize();
+        void _deserialize(QByteArray* deseriliazed_data );
 
-//    friend QDataStream &operator<<(QDataStream &data_stream, message*& msg)  // serailize
-//    {
+        virtual QByteArray* serialize() {return _serialize();}
+        virtual void deserialize(QByteArray* data) {return _deserialize(data);}
 
-//        data_stream << msg->head;
-//        data_stream << msg->msg_size;
-//        return data_stream;
-//    }
+        virtual QVector<MessageItem> map() { return{}; }
 
-    friend QDataStream &operator>>(QDataStream &data_stream, message& msg)  // deserailize
-    {
+        friend struct header;
+        friend QDataStream &operator<<(QDataStream &data_stream, message& msg)  // serailize
+        {
 
-        data_stream >> msg.head;
-        data_stream >> msg.msg_size;
-        return data_stream;
+            data_stream << msg.head;
+            data_stream << msg.msg_size;
+            return data_stream;
+        }
 
-    }
+        friend QDataStream &operator<<(QDataStream &data_stream, message*& msg)  // serailize
+        {
 
+            data_stream << msg->head;
+            data_stream << msg->msg_size;
+            return data_stream;
+        }
 
-//    friend QDataStream &operator>>(QDataStream &data_stream, message*& msg)  // deserailize
-//    {
+        friend QDataStream &operator>>(QDataStream &data_stream, message& msg)  // deserailize
+        {
 
-//        msg->head = header();
-//        data_stream >> msg->head;
-//        data_stream >> msg->msg_size;
-//        return data_stream;
+            data_stream >> msg.head;
+            data_stream >> msg.msg_size;
+            return data_stream;
 
-//    }
-
-    virtual ~message() = default;
-     auto get_type(){
-        return head.get_type();
-    }
-
-     quint64 get_send_time(){
-         return head.get_time_send();
-     }
-
-    header& get_head(){
-        return head;
-    }
-
-    qint64 get_size(){
-        return msg_size;
-    }
-protected:
-
-    header head ;
-    qint64 msg_size = 0;
-
-};
+        }
 
 
-struct  ping_message : public message{
+        friend QDataStream &operator>>(QDataStream &data_stream, message*& msg)  // deserailize
+        {
+
+            msg->head = header();
+            data_stream >> msg->head;
+            data_stream >> msg->msg_size;
+            return data_stream;
+
+        }
+
+         auto get_type(){
+            return head.get_type();
+        }
+
+        header& get_head(){
+            return head;
+        }
+
+        static qint64 getInitialSize() {
+
+            return sizeof(msg_size) + header::getInitialSize();
+        }
+
+        qint64 get_size(){
+            return msg_size;
+        }
+    protected:
+
+        header head ;
+        qint64 msg_size{0};
+
+    };
+//    #pragma pack(pop)
+
+    struct ping_message : message{
 
 
-    ping_message() : message(PingMessage){}
+        ping_message() : message(Constants::MessageType::Ping){}
 
 
-};
+    };
 
 
-struct pong_message : public message{
+    struct pong_message :  message{
 
 
-    pong_message() : message(PongMessage){}   
+        pong_message() : message(Constants::MessageType::Pong){}
 
-};
+    };
+
+//struct mainRecomednationMessage:  message {
+
+
+//    mainRecomednationMessage() : message(TrackMetadata) {}
+//    std::vector<struct TrackMetadata> tracks;
+
+
+//};
+
+
 
 
 //    QByteArray* serialize() override {
@@ -218,124 +203,161 @@ struct pong_message : public message{
 //        data_stream >> head;
 //        return data;
 
+
+
+////     serialize(){
+
+
+////        QByteArray* data = new QByteArray();
+////        QDataStream data_stream(data, QIODevice::WriteOnly);
+////        data_stream << music_name;
+////        data_stream << date_of_creation;
+////        data_stream << music_duration;
+////        data_stream << authors.size();
+////        for (QString author : authors){
+////            data_stream << author;
+////        }
+//////        if (image)
+//////          data_stream << image;
+////        output.setBuffer(data);
+
+
+
+
+//    void deserialize(QByteArray* input){
+
+////        QByteArray data = input.buffer();
+////        QDataStream data_stream(&data, QIODevice::ReadOnly);
+////        data_stream >> music_name;
+////        data_stream >> date_of_creation;
+////        data_stream >> music_duration;
+////        quint32 counts;
+////        QString author;
+////        data_stream >> counts;
+////        for (int i = 0; i < counts; ++i){
+////              data_stream >> author;
+////              authors.push_back(author);
+
+////        }
+////        data_stream >> image;
 //    }
 
 
 
+    struct Lyric: message {
+
+        QVector<MessageItem> map() override;
+        QString getData(){return data;}
+        qint64 getId(){return id;}
+    private:
+        QString data;
+        qint64 id;
+    };
+
+    struct Artist: message {
+
+        qint64                 getId() const {return id;}
+        QString                getName() const {return name;}
+        bool                   getIsImageNeeded() const {return isImageNeeded;}
+        std::optional<QString> getImage() const {return img;}
+
+        QVector<MessageItem> map() override;
+
+    private:
+        qint64 id;
+        QString name;
+        bool isImageNeeded;
+        std::optional<QString> img;
+    };
+
+    struct offset {
+
+        qint64 _start;
+        qint64 _end;
+    };
+    struct TrackData {
+
+        offset _offset;
+        QString data;
+    };
+
+    struct TrackMetadata: message {
+
+        qint64                      getId() const {return id;}
+        QString                     getTitle() const {return title;}
+        std::optional<qint64>       getBitrate() const {return bitrate;}
+        std::optional<qint64>       getSampleRate() const {return sampleRate;}
+        std::optional<qint64>       getDiscNumber() const {return discNumber;}
+        std::optional<qint64>       getTrackNumber() const {return trackNumber;}
+        std::optional<QDateTime>    getReleaseDate() const {return releaseDate;}
+        std::optional<QString>      getImage() const {return image;}
+        std::optional<Lyric>        getLyric() const{return lyrics;}
+        std::optional<TrackData>    getData() const {return data;}
+        std::vector<Artist>         getArtists() const {return artists;}
+        bool                        getIsImageNeed() const {return isImageNeed;}
+        bool                        getIsDataNeed() const {return isDataNeed;}
+
+        void            setId(qint64 _id){ id = _id;}
+        void            setTitle(QString _title){title = _title ;}
+        void            setBitrate(qint64 _bitrate){bitrate = _bitrate;}
+        void            setSampleRate(qint64 _samplerate){sampleRate = _samplerate;}
+        void            setDiscNumber(qint64 _discNumber){discNumber = _discNumber;}
+        void            setTrackNumber(qint64 _trackNumber){trackNumber = _trackNumber;}
+        void            setReleaseDate(QDateTime _releaseDate){releaseDate = _releaseDate;}
+        void            setArtists(std::vector<Artist> _artists){artists = _artists;}
+        void            setImage(QString _img){image = _img;}
+        void            setLyric(Lyric _lyric){lyrics = _lyric;}
+        void            setData(TrackData _data){data = _data;}
+        void            setIsImageNeed(bool res){isImageNeed = res;}
+        void            setIsDataNeed(bool res){isDataNeed = res;}
 
 
-//};
+    private:
+        qint64 id;
+        QString title;
+        bool isDataNeed;
+        bool isImageNeed;
+        std::optional<qint64> listCount;            // the lack of protocol leads to keep the count of data in message
+        std::optional<qint64> bitrate;
+        std::optional<qint64> sampleRate;
+        std::optional<qint64> discNumber;
+        std::optional<qint64> trackNumber;
+        std::optional<QDateTime> releaseDate;
+        std::optional<QString> image;
+        std::optional<Lyric>  lyrics;
+        std::optional<TrackData> data;
+        std::vector<Artist> artists;
+
+    };
 
 
+    struct messageParams{
 
-struct registration_message : message{
+    //    messageParams(Priorety pri, )
+    ;
+      enum Priorety{
 
+            High,
+            Normal,
+            Low
+      };
+      Priorety getPiorety(){
 
-    registration_message(QString login, QString password, QString name, QString nickname) : message(RegistrationMessage),
-    password(password), login(login), name(name), nickname(nickname) {}
-    QString get_login() { return login;}
-    QString get_password() { return password; }
+          return priorety;
+      }
 
+      message* getMessage(){
+          return msg.get();
+      }
 
-private:
-    QString password;
-    QString login;
-    QString name;
-    QString nickname;
-};
+      message* release(){
+          return msg.release();
+      }
 
+      Priorety priorety{Priorety::Normal};
+      std::unique_ptr<message> msg;
 
-struct  authorization_message : message {
+    };
 
-    authorization_message(QString login, QString password): message(AuthorizationMessage), login(login), password(password) {
-
-
-    }
-
-    QString get_login(){ return login;}
-    QString get_password() { return password;}
-
-private:
-    QString login;
-    QString password;
-};
-
-enum SERVER_STATUS_CODE{
-
-    Deny,
-    Accept
-};
-
-/*struct server_response : message{
-
-
-    server_response(): message(){
-
-
-    }
-private:
-
-    SERVER_STATUS_CODE code;
-
-}*/;
-struct track_message_header : message{
-
-//    track_message_header(QString name, std::vector<QString> authors,  QDateTime date_of_creation,
-//    quint32 music_duration /*std::optional<QImage> image*/):
-//        music_name(music_name), authors(authors), date_of_creation(date_of_creation),
-//        music_duration(music_duration)/*, image(image)*/
-//    {};
-
-
-
-//     serialize(){
-
-
-//        QByteArray* data = new QByteArray();
-//        QDataStream data_stream(data, QIODevice::WriteOnly);
-//        data_stream << music_name;
-//        data_stream << date_of_creation;
-//        data_stream << music_duration;
-//        data_stream << authors.size();
-//        for (QString author : authors){
-//            data_stream << author;
-//        }
-////        if (image)
-////          data_stream << image;
-//        output.setBuffer(data);
-
-
-
-
-    void deserialize(QByteArray* input){
-
-//        QByteArray data = input.buffer();
-//        QDataStream data_stream(&data, QIODevice::ReadOnly);
-//        data_stream >> music_name;
-//        data_stream >> date_of_creation;
-//        data_stream >> music_duration;
-//        quint32 counts;
-//        QString author;
-//        data_stream >> counts;
-//        for (int i = 0; i < counts; ++i){
-//              data_stream >> author;
-//              authors.push_back(author);
-
-//        }
-//        data_stream >> image;
-    }
-
-private:
-  QString music_name;
-  std::vector<QString> authors;
-  QDateTime date_of_creation;
-  quint32 music_duration; // in seconds
-//  std::optional<QImage> image; // track image
-
-
-
-
-};
-
-
+}
 #endif // MESSAGE_H

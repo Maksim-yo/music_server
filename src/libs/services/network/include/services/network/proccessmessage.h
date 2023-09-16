@@ -2,18 +2,21 @@
 #define PROCCESSMESSAGE_H
 #include "iproccessmessage.h"
 //#include "../music_server/message.h"
-#include "Constants.h"
 
 
+namespace Network {
 
 class ProccessMessage: public IProccessMessage
 {
 public:
-    ProccessMessage(Owner owner);
-    void proccess(QByteArray*&) override;
+    ProccessMessage();
+
+    void proccess(QByteArray&, Constants::MessageType type) override;
     void set_session(Session*) override;
 private:
-    Owner owner;
+    Constants::Owner owner;
 };
+
+}
 
 #endif // PROCCESSMESSAGE_H
