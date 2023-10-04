@@ -1,0 +1,6 @@
+#ifndef CMAKE_DATA_H_IN
+#define CMAKE_DATA_H_IN
+
+#define BUILD_DIR "@BUILD_DIR@"
+
+#endif // CMAKE_DATA_H_IN
