@@ -1,75 +1,43 @@
-#include "services/network/session.h"
-#include "services/network/connection.h"
 #include <QTimer>
 #include <QTcpSocket>
+
+#include "services/network/session.h"
+#include "services/network/tcpconnection.h"
 #include "services/network/message.h"
 #include "services/network/Constants.h"
-#include "services/network/iproccessmessage.h"
-class QDateTime ;
-Session::Session(QTcpSocket*& socket,IProccessMessage* _prc_msg, Owner owner, QObject* parent) : conn(std::move(new Connection(socket, owner))), QObject(parent)    //why conn(socket) not working?
-{
-
-        _prc_msg->set_session(this);
-        connect(conn, &Connection::new_message_income, this, &Session::readMessage);
-        connect(conn, &Connection::dropConnection, this, &QObject::deleteLater);
-        proccess_msg = _prc_msg;
-
-}
+#include "services/network/sendqueue.h"
+#include "services/network/proccessmessage.h"
+#include "services/network/IConnection.h"
+#include "impl/IConnection.cpp"
 
 
-void Session::write(message *msg){
+namespace Network {
+
+Session::Session(std::unique_ptr<IConnection> _conn, std::unique_ptr<IProccessMessage> _prc_msg, Constants::Owner owner, QObject* parent): conn(std::move(_conn)), owner(owner), QObject(parent) {
 
 
-    add_last_msg_out(msg);
-    emit conn->new_message_outgoing();
-
-}
-
-
-QByteArray* Session::get_first_msg_out(){return conn->get_first_msg_out();}
-QByteArray* Session::get_last_msg_out(){return conn->get_last_msg_out();}
-QByteArray* Session::get_last_msg_in(){return conn->get_last_msg_in();}
-QByteArray* Session::get_first_msg_in(){return conn->get_last_msg_in();}
-
-
-void Session::add_last_msg_in(message* msg){
-
-
-    conn->add_last_msg_in(msg);
-}
-
-
-void Session::add_last_msg_out(message* msg) {
-
-    conn->add_last_msg_out(msg);
-}
-
-void Session::read(message *&msg){
-
-//    incoming.append(msg);
-
-
-}
-Session::Session(Connection*& _conn, IProccessMessage* _prc_msg, QObject* parent): conn(_conn),  QObject(parent) {
-
-
-//    conn = _conn;
     _prc_msg->set_session(this);
-    connect(_conn->get_socket(), SIGNAL(readyRead()), this, SLOT(readMessage()));
-    connect(_conn, &Connection::dropConnection, this, &QObject::deleteLater);
-    proccess_msg = _prc_msg;
+//    proccess_msg = _prc_msg;
+    connect(&_conn->_signals, &IConnectionSignals::dropConnection, this, &QObject::deleteLater);
+    connect(&conn->_signals, &IConnectionSignals::newRecieveMessages, this, &Session::readMessage);
+
 }
 
 
+void Session::write(messageParams msg){
 
-void Session::ping(qint64 count){
+    conn->getQueue()->sendData(std::move(msg));
 
-
-    for(int i = 0; i < count; ++i){
-        message* msg = new ping_message();
-        write(msg);
-    }
 }
+
+
+void Session::handleMessage(){
+
+//    proccess_msg->proccess(conn->getRecieveMessages());
+
+}
+
+
 
 void Session::get_state()
 {
@@ -105,26 +73,56 @@ void Session::get_state()
 void Session::readMessage(){
 
 
-        QByteArray* msg;
-        msg = get_first_msg_in();
-        proccess_msg->proccess(msg);
 
+
+        // IS BIG ENDIAN OR LITTLE ENDIAN
+        QByteArray msgs = conn->getRecieveMessages();
+        int initSize = message::getInitialSize();
+
+        if (!partialMessage.isEmpty()) {
+
+            msgs.push_front(partialMessage);
+
+        }
+        while (true){
+
+            QByteArray msg;
+            message _message;
+            {
+                    QDataStream in(&msgs, QIODevice::ReadWrite);
+//                    in.setByteOrder(QDataStream::LittleEndian);
+                    in >> _message;
+            }
+
+            msg = msgs.remove(0,_message.get_size());
+            if (msg.size() < _message.get_size()){
+
+                partialMessage = msg;
+                return;
+            }
+
+            proccess_msg->proccess(msg, _message.get_type());
+
+        }
 }
 
 
-QString Session::local_address() {
+IConnection* Session::get_connection(){
 
-    return conn->local_address();
-}
-QString Session::peer_address() {
+    return conn.get();
 
-    return conn->peer_address();
 }
 
-
-Connection* Session::get_connection(){
-
-    return conn;
+Session* createSession(QTcpSocket*& socket, Constants::Owner owner, QObject *parent, ConnType type)
+{
+    std::unique_ptr<IConnection> conn = createConnection(socket, ConnType::TCP);
+    conn->setConnectionEstablishingTimer();
+    SendQueue* _sendQueue = new SendQueue();
+    conn->setQueue(_sendQueue);
+    std::unique_ptr<IProccessMessage> proc_msg = createProcMsg();
+    Session* session = new Session(std::move(conn), std::move(proc_msg), owner);
+    proc_msg->set_session(session);
+    return session;
 
 }
 
@@ -139,5 +137,4 @@ Connection* Session::get_connection(){
 //    process_message(_message);
 
 //}
-
-
+}

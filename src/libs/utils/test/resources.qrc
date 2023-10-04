@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>Paris.png</file>
+        <file>C:/Users/lyzlo/Downloads/images.jpg</file>
+    </qresource>
+</RCC>

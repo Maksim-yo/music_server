@@ -2,38 +2,47 @@
 #include "services/network/messagehandles.h"
 #include "services/network/message.h"
 #include "services/network/session.h"
+#include <QMetaEnum>
 
 
+namespace Network {
+
+    using namespace Constants;
+
+std::unique_ptr<IProccessMessage> createProcMsg() {
+
+
+    return std::make_unique<ProccessMessage>();
+}
 
 
 class RegistrationHandle{
 
-    void proccess(registration_message& msg){
+//    void proccess(registration_message& msg){
 
-        QString login = msg.get_login();
-//        bool res = validate_login(login);
-//        if (res){
+//        QString login = msg.get_login();
+////        bool res = validate_login(login);
+////        if (res){
 
-//            DB::ADD(//new structutr)   //user like informationx
-//        }
+////            DB::ADD(//new structutr)   //user like informationx
+////        }
 
 
-    }
+//    }
 
 };
-
 
 class AuthorizationHandle{
 
-    AuthorizationHandle(authorization_message msg){
+//    AuthorizationHandle(authorization_message msg){
 
-        QString login = msg.get_login();
-        QString password = msg.get_password();
+//        QString login = msg.get_login();
+//        QString password = msg.get_password();
 
-    }
+//    }
 };
 
-ProccessMessage::ProccessMessage(Owner owner) : owner(owner)
+ProccessMessage::ProccessMessage()
 {
 
 }
@@ -48,44 +57,57 @@ void ProccessMessage::set_session(Session* session){
 
 }
 
-void ProccessMessage::proccess(QByteArray*& msg){
+void ProccessMessage::proccess(QByteArray& msg, MessageType type){
 
 //    if (outgoing == QList<message*>())
 //        throw std::runtime_error("ProccessMessage is not set a queue");
-    QDataStream in(*msg);
-    message message;
-    in >> message;
-    MessageType msg_type = message.get_type();
-    switch(msg_type){
 
-    case TrackMessage:
+//    message _message;
+//    {
+//        QDataStream in(msg, QIODevice::ReadWrite);
+//        in >> _message;
+//    }
+//    MessageType msg_type = _message.get_type();
+//    qDebug() << "Proccessing message : " << QString((QMetaEnum::fromType<MessageType>().valueToKey(type)));
+
+    switch(type){
+
+    case MessageType::TrackMetadata:
 //        auto n_msg = reinterpret_cast<TrackMessage>(msg);
         break;
-    case ServerDeny:
+    case MessageType::ServerDeny:
         break;
-    case ServerAccept:
+    case MessageType::ServerAccept:
         break;
-    case ArtistMessage:
+    case MessageType::Artist:
         break;
-    case PlayListMessage:
+    case MessageType::PlayList:
         break;
-    case SettingsMessage:
+    case MessageType::Settings:
         break;
-    case RegistrationMessage:
+    case MessageType::Registration:
         break;
-    case AuthorizationMessage:
+    case MessageType::Authorization:
         break;
-    case PingMessage:
+    case MessageType::Ping:
     {
         pong_message* _msg = new pong_message();
-        _session->write(_msg);
+        {
+            QDataStream in(&msg, QIODevice::ReadWrite);
+            in >> *_msg;
+        }
+        std::unique_ptr<message> msg = std::make_unique<message>(std::move(static_cast<message*>(_msg)));
+//
+        messageParams msgParam = {messageParams::Priorety::High, std::move(msg)};
+        _session->write(std::move(msgParam));
         break;
     }
-    case PongMessage:
-        qDebug() << "Reply from "<<_session->peer_address() << " " << "response_time=";
+//    case MessageType::Pong:
 
         break;
 //        _session->add_last_msg_out(new ping_message());
 //        quint64 response_time = QDateTime::currentDateTime().msecsTo(message->get_send_time());
+
+    }
 }
 }

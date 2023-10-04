@@ -13,3 +13,4 @@ build/
 build2/
 .vs/
 out/
+*.mp3
