@@ -13,4 +13,4 @@ build/
 build2/
 .vs/
 out/
-./src/libs/metadata/test/*.mp3
+*.mp3
