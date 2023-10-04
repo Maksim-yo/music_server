@@ -1,0 +1,7 @@
+#ifndef CMAKE_DATA_H_IN
+#define CMAKE_DATA_H_IN
+
+#define METADATA_DIR "@METADATA_DIR@"
+
+
+#endif // CMAKE_DATA_H_IN
