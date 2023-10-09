@@ -3,13 +3,16 @@ add_library(utils SHARED
         impl/Image.cpp
         impl/error_image.cpp
         impl/Utils.cpp
+        impl/Log.cpp
+        impl/QtLogger.cpp
 
         include/utils/Image.h
         include/utils/ImagePNG.h
         include/utils/Utils.h
         include/utils/error_image.h
         include/utils/Services.h
-
+        include/utils/Log.h
+        include/utils/QtLogger.h
     )
 set_target_properties(utils PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
